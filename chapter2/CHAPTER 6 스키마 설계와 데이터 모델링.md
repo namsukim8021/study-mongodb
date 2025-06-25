@@ -105,3 +105,14 @@
     { "status": "shipped", "timestamp": "2024-01-02T09:00:00Z" }
   ]
 }
+```
+
+## 📝 마무리
+**우리팀이 사용하고 있는 MongoDB 스키마 설계는?**
+- collection : display_goods 
+- field 레벨로 상품 정보와 상품 가격정보 적재
+
+***개선한다면?***
+- collection : display_goods_v2
+- field 레벨로 필요한 상품 필드, 가격 필드를 꺼낸다.
+- lookup을 통해 타 collection과 조인가능. aggregate를 통해 집계 쿼리 가능
