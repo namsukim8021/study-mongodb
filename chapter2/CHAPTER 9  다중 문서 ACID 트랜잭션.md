@@ -1,6 +1,6 @@
-📘 마스터링 MongoDB 7.0 - 9장: 다중 문서 ACID 트랜잭션
+# 📘 마스터링 MongoDB 7.0 - 9장: 다중 문서 ACID 트랜잭션 #
 
-✅ ACID란?
+## ✅ ACID란?
 ACID는 데이터베이스 트랜잭션에서 지켜야 하는 4가지 속성
 
 약어	뜻	설명
@@ -11,25 +11,23 @@ ACID는 데이터베이스 트랜잭션에서 지켜야 하는 4가지 속성
 - I	Isolation (고립성)	여러 트랜잭션이 동시에 실행돼도 서로 영향을 주지 않아야 함. 
 - D	Durability (지속성)	트랜잭션이 성공하면, 시스템 장애가 발생해도 결과는 영구 저장돼야 함.
 
-✅ MongoDB의 트랜잭션 지원
+## ✅ MongoDB의 트랜잭션 지원 
 
 MongoDB는 원래 단일 문서에 대해서만 ACID를 보장했지만,
 MongoDB 4.0부터 다중 문서 트랜잭션을 지원하기 시작했습니다.
 MongoDB 7.0에서는 더 안정적이고 성능이 개선된 트랜잭션 기능을 제공합니다.
 
-✅ 왜 다중 문서 트랜잭션이 필요할까?
-
+## ✅ 왜 다중 문서 트랜잭션이 필요할까?
 예를 들어, 쇼핑몰 주문 처리 시 다음 두 작업이 필요
-
 - orders 컬렉션에 주문 정보를 저장
 - stock 컬렉션에서 재고 감소
 
 이 작업은 항상 함께 실행되어야 하고, 한쪽만 성공하면 데이터가 망가진다.
 
-✅ MongoDB에서 트랜잭션 사용하기
+## ✅ MongoDB에서 트랜잭션 사용하기
 MongoDB의 트랜잭션은 session을 이용해 수행한다.
 
-▶ 기본 구조 (JavaScript 예시)
+▶ 코드 (JavaScript 예시)
 ```javascript
 const session = await client.startSession();
 
@@ -46,18 +44,64 @@ await session.endSession();
 }
 ```
 
-✅ 트랜잭션 사용 시 주의사항
+▶ 코드 (kotlin 예시)
+```kotlin
+import com.mongodb.client.MongoClients
+import com.mongodb.client.ClientSession
+import com.mongodb.client.MongoCollection
+import com.mongodb.client.MongoDatabase
+import org.bson.Document
+
+fun main() {
+    val client = MongoClients.create("mongodb://localhost:27017")
+    val database: MongoDatabase = client.getDatabase("shop")
+    val orders: MongoCollection<Document> = database.getCollection("orders")
+    val stock: MongoCollection<Document> = database.getCollection("stock")
+
+    val session: ClientSession = client.startSession()
+
+    try {
+        session.startTransaction()
+
+        // 1. 주문 문서 삽입
+        val orderDoc = Document("userId", 1)
+            .append("item", "책")
+            .append("quantity", 1)
+        orders.insertOne(session, orderDoc)
+
+        // 2. 재고 감소
+        stock.updateOne(
+            session,
+            Document("item", "책"),
+            Document("\$inc", Document("quantity", -1))
+        )
+
+        // 3. 트랜잭션 커밋
+        session.commitTransaction()
+        println("트랜잭션 성공!")
+
+    } catch (e: Exception) {
+        println("트랜잭션 실패: ${e.message}")
+        session.abortTransaction()
+    } finally {
+        session.close()
+        client.close()
+    }
+}
+```
+
+## ✅ 트랜잭션 사용 시 주의사항
 - 성능: 트랜잭션은 내부적으로 복잡한 처리를 하기 때문에 속도가 느려질 수 있음.
 - 간단하게: 트랜잭션은 짧고 단순하게 구성하는 것이 좋음.
 - 모든 작업은 세션 안에서: 트랜잭션에 포함되는 모든 작업은 같은 session 객체를 통해 수행해야 함.
 
-✅ 트랜잭션이 필요한 대표적인 상황
+## ✅ 트랜잭션이 필요한 대표적인 상황
 - 은행 계좌 이체 (출금 + 입금)
 - 쇼핑몰 주문 처리 (주문 생성 + 재고 감소)
 - 회원 가입 (유저 정보 + 초기 설정 데이터 삽입)
 - 예약 시스템 (좌석 차감 + 예약 정보 기록)
 
-✅ 요약 정리
+## ✅ 요약 정리
 - 기능	여러 문서를 하나의 트랜잭션으로 처리
 - 지원 버전	MongoDB 4.0 이상
 - 주요 메서드	startTransaction(), commitTransaction(), abortTransaction()
